@@ -1,0 +1,100 @@
+# Machine Learning: Course Project
+
+##[Human Activity Recognition](http://groupware.les.inf.puc-rio.br/har#weight_lifting_exercises)
+
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement – a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. 
+
+##[Weight Lifting Exercise Data Set](http://groupware.les.inf.puc-rio.br/har#weight_lifting_exercises)
+
+The Weight Lifting Exercises dataset investigates "how well" an activity was performed by the wearer. Six young health participants were asked to perform one set of 10 repetitions of the Unilateral Dumbbell Biceps Curl in five different fashions: exactly according to the specification (Class A), throwing the elbows to the front (Class B), lifting the dumbbell only halfway (Class C), lowering the dumbbell only halfway (Class D) and throwing the hips to the front (Class E).Class A corresponds to the specified execution of the exercise, while the other 4 classes correspond to common mistakes.
+
+##Project Goal
+
+The project goal is to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants to predict the manner in which they did the exercise. The manner in which they did the exercise is categorized into Classes A to E.
+
+###[Training Data](https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv)
+
+###[Testing Data](https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv)
+
+##Load the required packages and the data
+```{r,echo=TRUE}
+library(randomForest)
+library(caret)
+origdf <- read.csv("pml-training.csv",na.strings=c("NA","NaN", " ",""))
+``` 
+
+##Preprocess the data
+
+###Remove predictors with near zero variance
+On inspection of the data, it can be seen that several predictors have near zero variance. As they do not 
+contribute usefully to the prediction, they can be removed. If a column has NA and NaN values for more than
+40% of the observations, they are removed.
+```{r,echo=TRUE}
+#Initialize a dataframe.
+df <- data.frame(matrix(NA, nrow=1, ncol=1))
+y <- round(19622 * 0.4)
+#Initialize a vactor to stor column id
+colid <- numeric()
+for( i in 1:160){
+      x <- sum(is.na(origdf[,i])) 
+      #If count of NA is less than threshold add column to new dataframe.
+      if ( x < y){
+            df <- cbind(df,origdf[,i])
+            colid <- c(colid,i)
+      }      
+}
+df <- subset(df, select = -c(1) )
+#Add column names
+origcolumnnames <- colnames(origdf)
+colidlen <- length(colid)
+dfcolnames <- character()
+for( i in 1:colidlen){
+      temp <- colid[i]
+      dfcolnames <- c(dfcolnames,origcolumnnames[temp])
+}
+colnames(df) <- dfcolnames
+```
+###Remove columns which do not contribute to prediction.
+Columns 1 to 6 contain data which do not influence the outcome, hence can be removed.
+```{r,echo=TRUE}
+df <- subset(df, select = -c(1,2,3,4,5,6) )
+```
+
+##Machine Learning Algorithm - Random Forests Classification
+The Random Forests algorithm has been chosen due to the following reasons.
+1. There are large number of predictors.
+2. Some of the predictors are highly correlated while some are not.
+3. Random forests algorithm takes care of cross validation internally.
+4. Random Forests list the variable importance.
+
+When the training set for the current tree is drawn by sampling with replacement, about one-third of the cases are left out of the sample. This oob (out-of-bag) data is used to get a running unbiased estimate of the classification error as trees are added to the forest. It is also used to get estimates of variable importance.
+(https://www.stat.berkeley.edu/~breiman/RandomForests/cc_home.htm#workings)
+
+```{r,echo=TRUE}
+df.rf <-randomForest(classe~.,data=df, ntree=50)
+df.rf
+```
+The out of bag error obtained is 0.22%, which is quite low.
+
+```{r,echo=TRUE}
+importance(df.rf)
+varImpPlot(df.rf,scale=FALSE)
+```
+
+##Testing the Model
+
+###Load and preprocess Test data
+```{r,echo=TRUE}
+origtestdf <- read.csv("pml-testing.csv",na.strings=c("NA","NaN", " ",""))
+testdf <- subset(origtestdf, select = colid)
+testdf <- subset(testdf, select = -c(1,2,3,4,5,6) )
+```
+
+###Predict classification for Test Data
+```{r,echo=TRUE}
+testdf.rf.pr = predict(df.rf, newdata=testdf)
+```
+
+##Submitting Test Results
+The results were submitted at (https://class.coursera.org/predmachlearn-005/assignment).
+It could be seen that the classification was 100% correct.
