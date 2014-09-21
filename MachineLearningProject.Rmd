@@ -74,12 +74,15 @@ When the training set for the current tree is drawn by sampling with replacement
 df.rf <-randomForest(classe~.,data=df, ntree=50)
 df.rf
 ```
-The out of bag error obtained is 0.22%, which is quite low.
+The out of bag error obtained is 0.22%, which is quite low.This is the same as the out of sample error.
 
+The importance of the predictors:
 ```{r,echo=TRUE}
 importance(df.rf)
 varImpPlot(df.rf,scale=FALSE)
 ```
+
+The plot shows the mean decrease gini of the various predictors.
 
 ##Testing the Model
 
